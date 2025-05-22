@@ -1,9 +1,23 @@
 import cv2
 import mediapipe as mp
 from collections import defaultdict
+import requests
+import numpy as np
+from io import BytesIO
 
 def is_finger_on_key(x, y, key_x, key_y, key_w, key_h):
     return key_x < x < key_x + key_w and key_y < y < key_y + key_h
+
+def fetch_image(query):
+    print("fetching image")
+    url = f"https://source.unsplash.com/640x480/?{query}"
+    response = requests.get(url)
+    if response.status_code == 200:
+        image_bytes = np.asarray(bytearray(response.content),dtype=np.uint8)
+        img = cv2.imdecode(image_bytes,cv2.IMREAD_COLOR)
+        return img
+    print("no image lol")
+    return None
 
 if __name__ == "__main__":
     #open camera
@@ -91,7 +105,11 @@ if __name__ == "__main__":
                         elif key == 'Backspace':
                             typed_text = typed_text[:-1]
                         elif key == 'Enter':
-                            typed_text += '\n'
+                            query = typed_text.strip()
+                            fetched_image = fetch_image(query)
+                            if fetched_image is not None:
+                                cv2.imshow("Search result", fetched_image)
+                            typed_text = ""
                         else:
                             typed_text += key
                         hover_counts.clear()
