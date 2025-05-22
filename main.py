@@ -16,6 +16,7 @@ if __name__ == "__main__":
 
     mphands = mp.solutions.hands
     Hands = mphands.Hands(max_num_hands = 2, min_detection_confidence=0.7, min_tracking_confidence=0.6)
+    mpdraw = mp.solutions.drawing_utils
 
     while True:
         success, frame = vid.read()
@@ -30,7 +31,7 @@ if __name__ == "__main__":
                 for id, lm in enumerate(handLm.landmark):
                     h,w,_ = frame.shape
                     cx,cy = int(lm.x*w), int(lm.y*h)
-                    cv2.circle(frame,(cx,cy),5,(0,255,0),cv2.FILLED)
+                    mpdraw.draw_landmarks(frame,handLm,mphands.HAND_CONNECTIONS)
 
         #write frame to output file
         out.write(frame)
