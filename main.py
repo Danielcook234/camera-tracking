@@ -1,5 +1,6 @@
 import cv2
 import mediapipe as mp
+from collections import defaultdict
 
 def is_finger_on_key(x, y, key_x, key_y, key_w, key_h):
     return key_x < x < key_x + key_w and key_y < y < key_y + key_h
@@ -8,6 +9,7 @@ if __name__ == "__main__":
     #open camera
     vid = cv2.VideoCapture(0)
     vid.set(3,960)
+    vid.set(4,720)
     
     #get width and height
     frame_width = int(vid.get(cv2.CAP_PROP_FRAME_WIDTH))
@@ -34,7 +36,8 @@ if __name__ == "__main__":
     start_y = 50
 
     typed_text = ""
-    last_pressed_key = None
+    hover_counts = defaultdict(int)
+    hover_threshold = 10
 
     while True:
         success, frame = vid.read()
@@ -50,7 +53,7 @@ if __name__ == "__main__":
 
         finger_x = None
         finger_y = None
-        pressed_this_frame = False
+        key_hovered = None
 
         #draw hand landmarks
         if result.multi_hand_landmarks:
@@ -72,18 +75,25 @@ if __name__ == "__main__":
 
                 #check for press
                 if finger_x and finger_y and is_finger_on_key(finger_x,finger_y, x, y, key_width, key_height):
-                    if last_pressed_key != key:
+                    hover_counts[key] += 1
+                    if hover_counts[key] >= hover_threshold:
                         typed_text += key
-                        last_pressed_key = key
+                        hover_counts.clear()
                     colour = (0,255,0)
-                    pressed_this_frame = True
+                else:
+                    colour = (200,200,200)
+                    hover_counts[key] = 0
 
-                cv2.rectangle(frame, (x, y), (x + key_width, y + key_height), colour, 2)
-                cv2.putText(frame, key, (x + 20, y + 40), cv2.FONT_HERSHEY_SIMPLEX, 1, colour, 2)
+                # Draw key background
+                cv2.rectangle(frame, (x, y), (x + key_width, y + key_height), colour, -1)
+                # Draw key border
+                cv2.rectangle(frame, (x, y), (x + key_width, y + key_height), (0, 0, 0), 2)
+                # Draw key label
+                cv2.putText(frame, key, (x + 18, y + 42), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2)
 
-        #reset if no key pressed
-        if not pressed_this_frame:
-            last_pressed_key = None
+        # Draw typed text above keyboard
+        cv2.rectangle(frame, (40, 400), (900, 460), (50, 50, 50), -1)
+        cv2.putText(frame, f"Typed: {typed_text}", (50, 445), cv2.FONT_HERSHEY_SIMPLEX, 1.2, (255, 255, 255), 3)
 
         #write frame to output file
         out.write(frame)
