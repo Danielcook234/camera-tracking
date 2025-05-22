@@ -28,7 +28,8 @@ if __name__ == "__main__":
     keys = [
         ['Q','W','E','R','T','Y','U','I','O','P'],
         ['A','S','D','F','G','H','J','K','L'],
-        ['Z','X','C','V','B','N','M']
+        ['Z','X','C','V','B','N','M'],
+        ['Space', 'Backspace', 'Enter']
     ]
     key_width = 60
     key_height = 60
@@ -69,6 +70,14 @@ if __name__ == "__main__":
             for col_idx, key in enumerate(row):
                 x = start_x + col_idx * key_width
                 y = start_y + row_idx * key_height
+
+                 # Adjust width for long keys
+                if key == 'Space':
+                    w = key_width * 3
+                elif key == 'Backspace' or key == 'Enter':
+                    w = key_width * 2
+                else:
+                    w = key_width
                 
                 #default colour
                 colour = (255,255,255)
@@ -77,7 +86,14 @@ if __name__ == "__main__":
                 if finger_x and finger_y and is_finger_on_key(finger_x,finger_y, x, y, key_width, key_height):
                     hover_counts[key] += 1
                     if hover_counts[key] >= hover_threshold:
-                        typed_text += key
+                        if key == 'Space':
+                            typed_text += ' '
+                        elif key == 'Backspace':
+                            typed_text = typed_text[:-1]
+                        elif key == 'Enter':
+                            typed_text += '\n'
+                        else:
+                            typed_text += key
                         hover_counts.clear()
                     colour = (0,255,0)
                 else:
@@ -89,7 +105,9 @@ if __name__ == "__main__":
                 # Draw key border
                 cv2.rectangle(frame, (x, y), (x + key_width, y + key_height), (0, 0, 0), 2)
                 # Draw key label
-                cv2.putText(frame, key, (x + 18, y + 42), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2)
+                label_x = x + 10 if w == key_width else x + 5
+                cv2.putText(frame, key, (label_x, y + 42), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2)
+
 
         # Draw typed text above keyboard
         cv2.rectangle(frame, (40, 400), (900, 460), (50, 50, 50), -1)
