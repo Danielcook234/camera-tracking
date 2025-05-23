@@ -9,14 +9,17 @@ def is_finger_on_key(x, y, key_x, key_y, key_w, key_h):
     return key_x < x < key_x + key_w and key_y < y < key_y + key_h
 
 def fetch_image(query):
-    print("fetching image")
-    url = f"https://source.unsplash.com/640x480/?{query}"
+    access_key = "YOUR_ACCESS_KEY"
+    url = f'https://api.unsplash.com/photos/random?query={query}&client_id={access_key}&count=1'
     response = requests.get(url)
     if response.status_code == 200:
-        image_bytes = np.asarray(bytearray(response.content),dtype=np.uint8)
-        img = cv2.imdecode(image_bytes,cv2.IMREAD_COLOR)
-        return img
-    print("no image lol")
+        data = response.json()
+        image_url = data[0]['urls']['regular']
+        image_response = requests.get(image_url)
+        if image_response.status_code == 200:
+            image_bytes = np.asarray(bytearray(image_response.content),dtype=np.uint8)
+            img = cv2.imdecode(image_bytes,cv2.IMREAD_COLOR)
+            return img
     return None
 
 if __name__ == "__main__":
@@ -53,6 +56,7 @@ if __name__ == "__main__":
     typed_text = ""
     hover_counts = defaultdict(int)
     hover_threshold = 10
+    fetched_image = None
 
     while True:
         success, frame = vid.read()
@@ -107,8 +111,6 @@ if __name__ == "__main__":
                         elif key == 'Enter':
                             query = typed_text.strip()
                             fetched_image = fetch_image(query)
-                            if fetched_image is not None:
-                                cv2.imshow("Search result", fetched_image)
                             typed_text = ""
                         else:
                             typed_text += key
@@ -130,6 +132,22 @@ if __name__ == "__main__":
         # Draw typed text above keyboard
         cv2.rectangle(frame, (40, 400), (900, 460), (50, 50, 50), -1)
         cv2.putText(frame, f"Typed: {typed_text}", (50, 445), cv2.FONT_HERSHEY_SIMPLEX, 1.2, (255, 255, 255), 3)
+
+        # Overlay fetched image if available
+        if fetched_image is not None:
+            overlay_height, overlay_width = 200, 200  # thumbnail size
+            img_resized = cv2.resize(fetched_image, (overlay_width, overlay_height))
+
+            # Coordinates to place bottom right
+            x_offset = frame.shape[1] - overlay_width - 20
+            y_offset = frame.shape[0] - overlay_height - 20
+
+            # Paste thumbnail into frame
+            frame[y_offset:y_offset+overlay_height, x_offset:x_offset+overlay_width] = img_resized
+
+            # Optional: Draw a border around the image
+            cv2.rectangle(frame, (x_offset, y_offset), (x_offset+overlay_width, y_offset+overlay_height), (0, 255, 0), 2)
+            cv2.putText(frame, "Search result", (x_offset, y_offset - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0,255,0), 2)
 
         #write frame to output file
         out.write(frame)
